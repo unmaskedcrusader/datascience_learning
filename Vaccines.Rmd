@@ -1,0 +1,65 @@
+---
+title: "Covid-19 Vaccines in Ontario"
+author: "Vinay"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+runtime: shiny
+output:
+  html_document:
+    fig_width: 10
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = TRUE)
+```
+
+```{r data, include = FALSE}
+library(tidyverse)
+library(naniar)
+library(numberFormattR)
+library(ggrepel)
+library(formattable)
+
+vaccine_doses <- read_csv("https://data.ontario.ca/dataset/752ce2b7-c15a-4965-a3dc-397bf405e7cc/resource/8a89caa9-511c-4568-af89-7f2174b4378c/download/vaccine_doses.csv")
+
+colnames(vaccine_doses) <- c("date", "daily_doses", "total_doses", "total_full", "total_persons_full")
+
+glimpse(vaccine_doses)
+
+#converting horizontal to vertical dataset(total doses and persons fully vaccinated)
+vaccine_tall <- vaccine_doses %>%
+  select(date, total_doses, total_persons_full) %>%
+  gather(key = daily_total, value = Doses, total_doses:total_persons_full) %>%
+  mutate(daily_total = as.factor(daily_total))
+
+data_end <- vaccine_tall%>%
+  group_by(daily_total)%>%
+  top_n(1, Doses) %>%
+  mutate(Doses = comma(Doses))
+```
+
+
+
+### Daily Doses administered 
+
+```{r vaccine_doses, echo=FALSE, warning = FALSE, out.width = "125%" }
+
+ggplot(vaccine_doses, aes(date, daily_doses)) + geom_col(color = "black", fill = "deepskyblue2") + theme_bw() + 
+    ggtitle("Daily Vaccine Doses Administered in Ontario") +
+    labs( x = NULL, y = "Number of Doses") + scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+
+```
+
+
+
+### Total Doses Administered
+
+```{r vaccine_tall, echo = FALSE, warning  = FALSE, out.width= "150%"}
+
+ggplot(vaccine_tall, aes(date, Doses, fill = daily_total)) + ggtitle("Vaccines administered in Ontario") +
+   labs(x = NULL, y = "No. of Doses") + theme_bw() + guides(fill = guide_legend("Vaccines administered")) +
+   geom_area(alpha = 0.8, position = "identity") + scale_fill_manual(labels = c("At least 1 dose", "Fully Vaccinated"), values = alpha(c("deepskyblue2", " dodgerblue3"))) +
+   scale_y_continuous(labels = suffix_formatter_0) + scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+   geom_text_repel(aes(label = Doses), data = data_end, color = "black", size = 3)
+
+```
