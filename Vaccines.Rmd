@@ -1,13 +1,30 @@
 ---
 title: "Covid-19 Vaccines in Ontario"
 author: "Vinay"
-date: "`r format(Sys.time(), '%d %B %Y')`"
+date: "*`r format(Sys.time(), '%d %B %Y')`*"
 runtime: shiny
 output:
   html_document:
     fig_width: 10
     fig_caption: yes
 ---
+<style>
+
+h1.title {
+ color: #E80b0b;
+ font-family: Calibri;
+ font-size: 70px;
+}
+h4.author {
+  color: #708090;
+  font-family: Calibri;
+}
+h4.date {
+  color: #708090;  
+  font-family: Calibri;
+  font-size: 15px
+}
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, fig.align = TRUE)
@@ -26,6 +43,11 @@ colnames(vaccine_doses) <- c("date", "daily_doses", "total_doses", "total_full",
 
 glimpse(vaccine_doses)
 
+daily_end <- vaccine_doses%>%
+  select(date, daily_doses)%>%
+  top_n(1, date) %>%
+  mutate(New_daily_dose = comma(daily_doses))
+
 #converting horizontal to vertical dataset(total doses and persons fully vaccinated)
 vaccine_tall <- vaccine_doses %>%
   select(date, total_doses, total_persons_full) %>%
@@ -38,28 +60,33 @@ data_end <- vaccine_tall%>%
   mutate(Doses = comma(Doses))
 ```
 
+All data was last updated on `r daily_end$date` at 10:30 am and reflects vaccinations from 8 pm the previous day.
+Raw data can be found at the [Ontario Data Catalogue](https://data.ontario.ca/dataset/covid-19-vaccine-data-in-ontario) 
 
+## Daily Vaccinations  
 
-### Daily Doses administered 
+```{r vaccine_doses, echo=FALSE, warning = FALSE, fig.width= 10}
 
-```{r vaccine_doses, echo=FALSE, warning = FALSE, out.width = "125%" }
-
-ggplot(vaccine_doses, aes(date, daily_doses)) + geom_col(color = "black", fill = "deepskyblue2") + theme_bw() + 
-    ggtitle("Daily Vaccine Doses Administered in Ontario") +
-    labs( x = NULL, y = "Number of Doses") + scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+ggplot(vaccine_doses, aes(date, daily_doses)) + geom_col(color = "white", fill = "deepskyblue2") + theme_bw() + 
+    ggtitle("Daily Vaccine Doses Administered in Ontario") + scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+    labs( x = NULL, y = "Number of Doses") + geom_text_repel(aes(label = New_daily_dose),
+                                                             data = daily_end, color = "black", size = 5, hjust = "right", direction = "x")
 
 ```
 
+**`r daily_end$New_daily_dose`** doses were administered in Ontario on **`r tail(vaccine_doses,2)[-2,1]`** 
 
+## Total Vaccinations 
 
-### Total Doses Administered
-
-```{r vaccine_tall, echo = FALSE, warning  = FALSE, out.width= "150%"}
+```{r vaccine_tall, echo = FALSE, warning  = FALSE,  fig.width = 10}
 
 ggplot(vaccine_tall, aes(date, Doses, fill = daily_total)) + ggtitle("Vaccines administered in Ontario") +
-   labs(x = NULL, y = "No. of Doses") + theme_bw() + guides(fill = guide_legend("Vaccines administered")) +
+   labs(x = NULL, y = "No. of Doses") + theme_bw() + guides(fill = guide_legend(NULL)) +
    geom_area(alpha = 0.8, position = "identity") + scale_fill_manual(labels = c("At least 1 dose", "Fully Vaccinated"), values = alpha(c("deepskyblue2", " dodgerblue3"))) +
    scale_y_continuous(labels = suffix_formatter_0) + scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-   geom_text_repel(aes(label = Doses), data = data_end, color = "black", size = 3)
+   geom_text_repel(aes(label = Doses), data = data_end, color = "black", size = 5) + 
+   theme(legend.position = "bottom")
 
 ```
+
+**`r data_end[1,3]`** doses have been administered in total and **`r data_end[2,3]`** individuals are fully vaccinated. 
